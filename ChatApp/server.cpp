@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <thread>
-#include <mutex>
 #include <cstdlib>
 #include <cstring>
 #include <winsock2.h>
@@ -129,7 +128,7 @@
 }
 
     void ChatServer::createChannel(int clientSocket, const std::string& channelName) {
-        std::lock_guard<std::mutex> lock(channelsMutex);
+      
 
         
             // Channel does not exist, create it
@@ -147,7 +146,7 @@
     }
 
     void ChatServer::joinChannel(int clientSocket, const std::string& channelName) {
-        std::lock_guard<std::mutex> lock(channelsMutex);
+       
 
         auto it = channels.find(channelName);
         if (it != channels.end()) {
@@ -166,7 +165,7 @@
     }
 
     void ChatServer::sendMessage(int clientSocket, const std::string& channelName, const std::string& content) {
-    std::lock_guard<std::mutex> lock(channelsMutex);
+    
 
     auto it = channels.find(channelName);
     if (it != channels.end()) {
@@ -192,8 +191,9 @@
 }
 
     void ChatServer::listChannels(int clientSocket) {
-        std::lock_guard<std::mutex> lock(channelsMutex);
-
+       
+        std::cout << "channels size: "+channels.size() << std::endl;
+        
         std::string channelList = "Available channels:\n";
         std::cout << "Available channels: " << std::endl;
         for (const auto& entry : channels) {
