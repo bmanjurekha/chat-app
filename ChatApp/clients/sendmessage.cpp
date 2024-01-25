@@ -4,14 +4,25 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-void joinChannel(int clientSocket, const std::string& channelName) {
-    std::string joinCommand = "JOIN " + channelName;
-    if (send(clientSocket, joinCommand.c_str(), joinCommand.size(), 0) == SOCKET_ERROR) {
-        std::cerr << "Error sending JOIN command to server\n";
+void sendMessage(int clientSocket, const std::string& channelName, const std::string& content) {
+    std::cout << "In sendMessage " ;
+    std::string sendCommand = "SEND " + channelName + " " + content;
+    if (send(clientSocket, sendCommand.c_str(), sendCommand.size(), 0) == SOCKET_ERROR) {
+        std::cerr << "Error sending SEND command to server\n";
     } else {
-        std::cout << "Joined channel: " << channelName << std::endl;
+        std::cout << "Message sent to channel " << channelName << ": " << content << std::endl;
     }
 }
+void listChannel(int clientSocket) {
+    std::cout << "In listChannel " ;
+    std::string sendCommand = "LIST_CHANNELS ";
+    if (send(clientSocket, sendCommand.c_str(), sendCommand.size(), 0) == SOCKET_ERROR) {
+        std::cerr << "Error sending SEND command to server\n";
+    } else {
+        std::cout << "Message sent to channel \n";
+    }
+}
+
 
 int main() {
     // Initialize Winsock
@@ -43,8 +54,9 @@ int main() {
         return 1;
     }
 
-    // Join a channel
-    joinChannel(clientSocket, "General");
+    // You can add more logic here to interact with the server, send messages, etc.
+    sendMessage(clientSocket, "General", "Hello, everyone!");
+
     // Cleanup
     closesocket(clientSocket);
     WSACleanup();

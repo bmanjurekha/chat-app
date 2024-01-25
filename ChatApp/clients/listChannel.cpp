@@ -3,13 +3,13 @@
 #include <winsock2.h>
 
 #pragma comment(lib, "ws2_32.lib")
-
-void joinChannel(int clientSocket, const std::string& channelName) {
-    std::string joinCommand = "JOIN " + channelName;
-    if (send(clientSocket, joinCommand.c_str(), joinCommand.size(), 0) == SOCKET_ERROR) {
-        std::cerr << "Error sending JOIN command to server\n";
+void listChannel(int clientSocket) {
+    std::cout << "In listChannel " ;
+    std::string sendCommand = "LIST_CHANNELS ";
+    if (send(clientSocket, sendCommand.c_str(), sendCommand.size(), 0) == SOCKET_ERROR) {
+        std::cerr << "Error sending SEND command to server\n";
     } else {
-        std::cout << "Joined channel: " << channelName << std::endl;
+        std::cout << "Message sent to channel \n";
     }
 }
 
@@ -42,9 +42,9 @@ int main() {
         WSACleanup();
         return 1;
     }
-
-    // Join a channel
-    joinChannel(clientSocket, "General");
+  
+    //List of Channels
+    listChannel(clientSocket);
     // Cleanup
     closesocket(clientSocket);
     WSACleanup();

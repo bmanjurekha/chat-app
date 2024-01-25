@@ -1,18 +1,28 @@
 #include <iostream>
 #include <cstring>
 #include <winsock2.h>
-
+#include <string>
+#include <vector>
+#include <thread>
 #pragma comment(lib, "ws2_32.lib")
 
-void joinChannel(int clientSocket, const std::string& channelName) {
-    std::string joinCommand = "JOIN " + channelName;
-    if (send(clientSocket, joinCommand.c_str(), joinCommand.size(), 0) == SOCKET_ERROR) {
-        std::cerr << "Error sending JOIN command to server\n";
-    } else {
-        std::cout << "Joined channel: " << channelName << std::endl;
+using std::string;
+using std::vector;
+
+void receiveMessages(int clientSocket) {
+    char buffer[1024];
+    while (true) {
+        int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesRead <= 0) {
+            // Handle server disconnect or error
+            std::cerr << "Server disconnected\n";
+            break;
+        }
+
+        buffer[bytesRead] = '\0'; // Null-terminate the received data
+        std::cout << "Received message: " << buffer << std::endl;
     }
 }
-
 int main() {
     // Initialize Winsock
     WSADATA wsaData;
@@ -42,9 +52,10 @@ int main() {
         WSACleanup();
         return 1;
     }
-
-    // Join a channel
-    joinChannel(clientSocket, "General");
+     // Start a thread to receive messages
+    std::thread receiveThread(receiveMessages, clientSocket);
+     // Wait for the receive thread to finish (e.g., when the server disconnects)
+    receiveThread.join();
     // Cleanup
     closesocket(clientSocket);
     WSACleanup();
