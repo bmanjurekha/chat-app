@@ -43,6 +43,9 @@ public:
     }
 
     ~ChatServer() {
+        // for (auto channel : channels) {
+        //     delete channel; // Deallocate memory for each Channel object on the heap
+        // }
         WSACleanup();
     }
     void startServer();
@@ -54,10 +57,13 @@ public:
     void joinChannel(int clientSocket, const std::string& channelName);
     void sendMessage(int clientSocket, const std::string& channelName, const std::string& content);
     void listChannels(int clientSocket);
-    void receiveMessages(int clientSocket);
+    void deleteChannel(int clientSocket, const std::string& channelName);
     //Parse HTTP request & get Json Value
     bool parseHttpRequest(const std::string& httpRequest, std::string& method, std::string& path, std::string& body);
     std::string getJsonValue(const std::string& json, const std::string& key);
+    void printChannelHistory(int clientSocket,const std::string& channelName);
+    void saveDataToFile(const std::string& filePath,const std::string& content);
+    void readDataFromFile(const std::string& filePath);
 
     private:
     int port;

@@ -10,8 +10,11 @@
 #include <winsock2.h>
 #include "server.hpp"
 #include <sstream>
+#include <fstream>
 
 #pragma comment(lib, "ws2_32.lib")
+
+   
 
     void ChatServer::startServer() {
         // Set up socket
@@ -106,7 +109,16 @@
         std::cerr << "Joined Channel\n"+channelname;
         joinChannel(clientSocket, channelname);
         return ;
-    } else if (path == "/SEND") {
+    }
+    else if (path == "/DELETE")
+    {
+         // Extract channel name from arguments
+        std::cerr << "Delete Channel\n";
+        // Split the JSON-like string
+        std::string channelname = getJsonValue(body,"channelname");
+        deleteChannel(clientSocket, channelname);
+    }     
+    else if (path == "/SEND") {
         // Extract channel name and content from arguments
         std::cerr << "Message Sent\n";
        // Split the JSON-like string
@@ -119,18 +131,27 @@
         std::cerr << "List of Channel\n";
         listChannels(clientSocket);
         return ;
-    } else if (path == "/MESSAGES"){
+    } else if (path == "/SHOWCHATHISTORY"){
         // No additional arguments for LIST_CHANNELS
-        std::cerr << "Show messages\n";
-        receiveMessages(clientSocket);
+        std::cerr << "Show messages from history\n";
+        std::string channelname = getJsonValue(body,"channelname");
+        printChannelHistory(clientSocket,channelname);
+        return ;
+    }
+    else if (path == "/SHOWCHATHISTORYFILE"){
+        // No additional arguments for LIST_CHANNELS
+        std::cerr << "Show messages from file\n";
+        std::string channelname = getJsonValue(body,"channelname");
+        readDataFromFile(channelname);
         return ;
     }
 }
 
     void ChatServer::createChannel(int clientSocket, const std::string& channelName) {
-      
+            
+            //Channel created in Heap Memory
+            Channel* cnl = new Channel(channelName);
 
-        
             // Channel does not exist, create it
             auto result = channels.emplace(channelName, channelName);
             if (result.second) {
@@ -146,7 +167,6 @@
     }
 
     void ChatServer::joinChannel(int clientSocket, const std::string& channelName) {
-       
 
         auto it = channels.find(channelName);
         if (it != channels.end()) {
@@ -165,14 +185,14 @@
     }
 
     void ChatServer::sendMessage(int clientSocket, const std::string& channelName, const std::string& content) {
-    
 
     auto it = channels.find(channelName);
     if (it != channels.end()) {
         // Channel exists
         Channel& channel = it->second;
-        std::string message = "User: " + content; // You can customize the format
+        std::string message = content; // You can customize the format
         channel.addMessage(message);
+        saveDataToFile(channelName,message);
         std::cout << "Message Sent to Channel: " << std::endl;
         // Broadcast the message to all clients in the channel
         for (const auto& entry : clientChannels) {
@@ -191,7 +211,7 @@
 }
 
     void ChatServer::listChannels(int clientSocket) {
-       
+
         std::cout << "channels size: "+channels.size() << std::endl;
         
         std::string channelList = "Available channels:\n";
@@ -205,21 +225,34 @@
        
     }
 
-    void ChatServer::receiveMessages(int clientSocket){
-        char buffer[1024];
-        while (true) {
-            int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-            if (bytesRead <= 0) {
-                // Handle server disconnect or error
-                std::cerr << "Server disconnected\n";
-                break;
-            }
+    void ChatServer::deleteChannel(int clientSocket, const std::string& channelName) {
+        
+        auto it = channels.find(channelName);
+        if (it != channels.end()) {
+            // Channel exists, delete it
+            channels.erase(it);
+            sendMessage(clientSocket,channelName, "DELETE_CHANNEL_OK " + channelName);
+        } else {
+            // Channel does not exist
+            sendMessage(clientSocket,channelName, "ERROR Channel does not exist");
+        }
+    }
 
-            buffer[bytesRead] = '\0'; // Null-terminate the received data
-            std::cout << "Received message: " << buffer << std::endl;
+    // Method to print the chat history of each channel
+    void ChatServer::printChannelHistory(int clientSocket,const std::string& channelName)  {
+
+        auto it = channels.find(channelName);
+        if (it != channels.end()) {
+            // Channel exists
+            Channel& channel = it->second;
+            std::vector<std::string> msgHsty = channel.getHistory();
+            for (auto it = msgHsty.begin(); it != msgHsty.end(); ++it){
+                std::cout << "History: " +(*it) << std::endl;
+            }
+            
         }
         closesocket(clientSocket);
-    }    
+    }
 
     bool ChatServer::parseHttpRequest(const std::string& httpRequest, std::string& method, std::string& path, std::string& body) {
     // Find the end of the request line
@@ -255,7 +288,42 @@
     return true;
 }
 
+    void ChatServer::saveDataToFile(const std::string& filePath,const std::string& content)  {
+        // Open the file for writing
+        std::ofstream outputFile(filePath+".txt");
 
+        // Check if the file is opened successfully
+        if (outputFile.is_open()) {
+            // Write the string to the file
+            outputFile << content;
+
+            // Close the file
+            outputFile.close();
+
+            std::cout << "String successfully saved to file: " << filePath << std::endl;
+        } else {
+            std::cerr << "Error opening the file for writing." << std::endl;
+        }
+    }
+    void ChatServer::readDataFromFile(const std::string& filePath)  {
+        // Open the file for reading
+        std::ifstream inputFile(filePath+".txt");
+
+        // Check if the file is opened successfully
+        if (inputFile.is_open()) {
+            // Read the file content into a string
+            std::string fileContent((std::istreambuf_iterator<char>(inputFile)),
+                                    std::istreambuf_iterator<char>());
+
+            // Close the file
+            inputFile.close();
+
+            // Print the content
+            std::cout << "File content:\n" << fileContent << std::endl;
+        } else {
+            std::cerr << "Error opening the file for reading." << std::endl;
+        }
+    }
     // Function to parse a simple key-value JSON string
     std::string ChatServer::getJsonValue(const std::string& json, const std::string& key) {
         // Find the position of the key
